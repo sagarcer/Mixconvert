@@ -111,8 +111,9 @@ export function parse(text) {
 
     if (path[0] === 'headamp') { headamps[+path[1]] = { gain: num(t[0]), phantom: on(t[1]) }; continue; }
     if (path[0] === 'config' && path[1] === 'routing' && path[2] === 'IN') { routingIn = t.slice(0, 4); continue; }
+    if (path[0] === 'config' && path[1] === 'chlink') { mix.channelLinks = t.map(on); continue; }
     if (path[0] === 'config' && /link$/.test(path[1] || '')) {
-      if (t.some(on)) warnOnce(mix, `Hay enlaces estéreo (${path[1]}). La Wing gestiona el estéreo en la fuente: revísalo a mano.`);
+      if (t.some(on)) warnOnce(mix, `Hay enlaces estéreo en ${path[1]} que no se convierten: revísalos en la Wing.`);
       continue;
     }
     if (path[0] === 'dca') {

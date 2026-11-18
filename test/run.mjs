@@ -77,5 +77,18 @@ t('matriz: preamp solo fase, dinámica sin keysrc', () => {
   assert.equal(m.in.set.inv, true); assert.equal(m.dyn.mix, 80); assert.equal(m.dyn.auto, true);
 });
 t('main → matrices', () => assert.deepEqual(ae.main['1'].send.MX2, { on: true, lvl: -3, pre: false }));
+t('par enlazado → canal estéreo', () => {
+  const c = ae.ch['5'];
+  assert.equal(c.name, 'Piano'); assert.equal(c.pan, 0); assert.equal(c.wid, 100); assert.equal(c.fdr, -4);
+  assert.deepEqual([c.in.conn.grp, c.in.conn.in], ['A', 5]);
+  assert.equal(ae.io.in.A['5'].mode, 'ST'); assert.equal(ae.io.in.A['5'].g, 12);
+  assert.equal(c.send['1'].lvl, -8);
+  assert.equal(ae.io.in.A['1'].mode, 'M');
+});
+t('canal par liberado', () => {
+  const c = ae.ch['6'];
+  assert.deepEqual([c.name, c.mute, c.fdr, c.in.conn.grp, c.main['1'].on], ['', true, -144, 'OFF', false]);
+  assert.equal(ae.io.in.A['6'], undefined);
+});
 console.log(`\n${warnings.length} avisos:\n - ` + warnings.join('\n - '));
 process.exit(failures ? 1 : 0);

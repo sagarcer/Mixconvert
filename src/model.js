@@ -13,6 +13,7 @@
 //   matrices: Strip[]
 //   mains:    Strip[]   ([0] = estéreo L/R, [1] = mono/centro)
 //   dcas:     { index, name, color, on, fader }[]
+//   channelLinks: boolean[]  (pares de canales enlazados en estéreo: [0] = 1-2, [1] = 3-4...)
 //   warnings: string[]
 // }
 //
@@ -39,7 +40,7 @@ export function emptyMix() {
   return {
     meta: { console: '', version: '', name: '', notes: '' },
     channels: [], auxins: [], buses: [], matrices: [], mains: [], dcas: [],
-    warnings: [],
+    channelLinks: [], warnings: [],
   };
 }
 

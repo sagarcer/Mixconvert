@@ -1,5 +1,5 @@
 #4.0# "Concierto" "Prueba de conversión" %000000000 1 X32
-/config/chlink OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF
+/config/chlink OFF OFF ON OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF
 /config/routing/IN A1-8 A9-16 AN17-24 CARD1-8 AUX/CR
 /ch/01/config "Bombo" 1 RD 1
 /ch/01/delay OFF   0.3
@@ -51,3 +51,10 @@
 /mtx/02/eq/6 BU6 170.2 +0.00 2.0
 /main/st/mix/01 ON   0.0 +0 POST 0
 /main/st/mix/02 ON  -3.0
+/ch/05/config "Piano L" 1 MG 5
+/ch/05/mix ON  -4.0 ON -100 OFF   -oo
+/ch/05/mix/01 ON  -8.0 +0 POST 0
+/ch/06/config "Piano R" 1 MG 6
+/ch/06/mix ON  -4.0 ON +100 OFF   -oo
+/headamp/036 +12.0 ON
+/headamp/037 +12.0 ON

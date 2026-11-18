@@ -174,6 +174,19 @@ function convertStrip(mix, s, kind, slots) {
   return o;
 }
 
+// Nombre común de un par estéreo: "Piano L" + "Piano R" -> "Piano".
+export function stereoName(l, r) {
+  if (l === r) return l;
+  const base = (n) => n.replace(/[\s_.-]*(L|R|IZQ|DER|LEFT|RIGHT)$/i, '').trim();
+  return base(l) && base(l) === base(r) ? base(l) : l;
+}
+
+// Wing: poner una fuente impar en modo "ST" la une con la siguiente (L/R).
+function stereoInputOk(l, r) {
+  return l.input && r.input && l.input.group === r.input.group && l.input.group !== 'OTHER'
+    && l.input.number % 2 === 1 && r.input.number === l.input.number + 1;
+}
+
 // ---------- API ----------
 
 export function write(mix, opts = {}) {
@@ -183,8 +196,34 @@ export function write(mix, opts = {}) {
   const CH_SLOTS = ['l', '1', '2', 'h'];
   const BUS_SLOTS = ['l', '1', '2', '3', '4', 'h'];
 
+  const pairs = new Map(); // canal impar -> canal par (pares estéreo válidos)
+  (mix.channelLinks || []).forEach((linked, i) => {
+    if (!linked) return;
+    const l = mix.channels[i * 2];
+    const r = mix.channels[i * 2 + 1];
+    if (!l || !r) return;
+    if (stereoInputOk(l, r)) pairs.set(l.index, r);
+    else warnOnce(mix, `Canales ${l.index}-${r.index} enlazados, pero sus entradas no son un par consecutivo impar/par: se dejan como dos canales mono.`);
+  });
+  const freed = new Set([...pairs.values()].map((r) => r.index));
+
   mix.channels.forEach((s) => {
+    if (freed.has(s.index)) {
+      // El canal par queda libre: su señal ya va por el canal estéreo impar.
+      ae.ch[s.index] = { name: '', mute: true, fdr: NEG_INF, tags: '', in: { conn: { grp: 'OFF', in: 1 } }, main: { 1: { on: false }, 2: { on: false } } };
+      return;
+    }
     const o = convertStrip(mix, s, 'ch', CH_SLOTS);
+    const right = pairs.get(s.index);
+    if (right) {
+      o.name = stereoName(s.name || '', right.name || '').slice(0, 16);
+      o.pan = r(clamp((s.pan + right.pan) / 2, -100, 100));
+      o.wid = r(clamp((right.pan - s.pan) / 2, -150, 150));
+      if (s.input.hasGain && right.input.hasGain && (s.input.gain !== right.input.gain || s.input.phantom !== right.input.phantom)) {
+        warnOnce(mix, `Par estéreo ${s.index}-${right.index}: L y R tenían ganancia/phantom distintos; la Wing usa una sola ganancia (se toma la del canal ${s.index}).`);
+      }
+      warnOnce(mix, 'Los pares enlazados (chlink) pasan a un canal estéreo en el canal impar con su par de entradas AES; el canal par queda libre.');
+    }
     if (s.input && s.input.group !== 'OTHER') {
       const grp = s.input.group === 'LOCAL' ? options.localTarget : INPUT_GROUP[s.input.group];
       const n = s.input.number;
@@ -195,7 +234,7 @@ export function write(mix, opts = {}) {
       // Si dos canales comparten entrada (p. ej. voz y su copia para monitores),
       // la fuente conserva el nombre del primero.
       const prev = ae.io.in[grp] && ae.io.in[grp][n];
-      const src = prev ? {} : { name: o.name, col: o.col };
+      const src = prev ? {} : { name: o.name, col: o.col, mode: right ? 'ST' : 'M' };
       if (s.input.hasGain && grp !== 'CRD') {
         const [min, max] = grp === 'LCL' ? [-2.5, 45] : [-3, 45.5];
         src.g = r(clampWarn(mix, s.input.gain, min, max, 'Ganancia de previo'));
