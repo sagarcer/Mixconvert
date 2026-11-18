@@ -4,18 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MixConvert</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
   :root {
     --bg: #f5f5f3; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e2e2e0;
-    --accent: #d9480f; --accent-text: #ffffff; --warn-bg: #fff4e5; --warn: #8a4b00; --ok: #2b8a3e;
+    --accent: #d9480f; --accent-text: #ffffff; --warn-bg: #fff4e5; --warn: #8a4b00; --ok: #2b8a3e; --err: #c92a2a;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #141416; --panel: #1e1e21; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33;
-      --accent: #ff7a3d; --accent-text: #141416; --warn-bg: #2b2111; --warn: #f5c071; --ok: #69db7c; }
+    :root:not([data-theme="light"]) { --bg: #141416; --panel: #1e1e21; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33;
+      --accent: #ff7a3d; --accent-text: #141416; --warn-bg: #2b2111; --warn: #f5c071; --ok: #69db7c; --err: #ff6b6b; color-scheme: dark; }
   }
+  :root[data-theme="dark"] { --bg: #141416; --panel: #1e1e21; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33;
+    --accent: #ff7a3d; --accent-text: #141416; --warn-bg: #2b2111; --warn: #f5c071; --ok: #69db7c; --err: #ff6b6b; color-scheme: dark; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  main { max-width: 760px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
   .sub { color: var(--muted); margin: 0 0 28px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
@@ -43,7 +46,7 @@
   .stat span { font-size: 12px; color: var(--muted); }
   .warns { list-style: none; padding: 0; margin: 12px 0 0; }
   .warns li { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 14px; }
-  .error { color: #e03131; font-weight: 500; }
+  .error { color: var(--err); font-weight: 500; }
   footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   @media (max-width: 560px) { .route, .opts { grid-template-columns: 1fr; } .route .arrow { display: none; } }
 </style>
@@ -136,7 +139,17 @@ $('file').onchange = (e) => setSource(e.target.files[0]);
 $('drop').addEventListener('drop', (e) => { e.preventDefault(); setSource(e.dataTransfer.files[0]); });
 $('tpl').onchange = async (e) => { template = e.target.files[0] ? await readText(e.target.files[0]) : null; };
 
-function download(name, text, type = 'application/json') {
+// Publicada en claude.ai: la descarga pasa por la capacidad "downloads",
+// que solo admite .json/.txt (el .snap se guarda como .snap.json).
+const downloadsCap = window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+async function download(name, text, type = 'application/json') {
+  const cap = await downloadsCap;
+  if (cap) {
+    const filename = /\.(json|txt)$/.test(name) ? name : name + '.json';
+    try { await cap.save({ filename, data: text }); if (filename !== name) $('status').textContent = `Guardado como ${filename}: renómbralo a ${name} antes de cargarlo en la Wing.`; }
+    catch (e) { if (e.code !== 'declined') $('status').textContent = 'No se pudo descargar: ' + e.message; }
+    return;
+  }
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type })), download: name });
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
