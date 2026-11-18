@@ -39,3 +39,15 @@
 /dca/1 ON  -1.5
 /dca/1/config "Batería" 1 RD
 /fxrtn/01/config "Rev" 1 MG
+/ch/02/config "Caja" 1 WHi 2
+/ch/02/eq/3 PEQ 3k55 +1.75 1.3
+/ch/02/eq/4 HShv 8k43 -1.25 2.0
+/ch/02/mix ON  -1.7 ON +0 ON  -3.5
+/ch/02/mix/01 ON   -oo +0 EQ-> 0
+/ch/02/mix/02 ON -13.0
+/ch/02/mix/03 ON  -4.0 +0 <-EQ 0
+/mtx/02/preamp ON
+/mtx/02/dyn ON COMP RMS LOG -6.0 3.0 1 3.00 10 10.0  151 POST 80 ON
+/mtx/02/eq/6 BU6 170.2 +0.00 2.0
+/main/st/mix/01 ON   0.0 +0 POST 0
+/main/st/mix/02 ON  -3.0

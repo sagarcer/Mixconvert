@@ -100,7 +100,7 @@ function convertEq(mix, eq, slots, isInput, strip) {
         warnOnce(mix, 'Bandas de EQ "HCut" convertidas al filtro paso-bajo (high cut) de la Wing.');
         strip.flt = { ...(strip.flt || {}), hc: !!eq.on, hcf: r(clamp(b.freq, 50, 20000)) };
       } else {
-        warnOnce(mix, 'Bandas de EQ tipo "LCut/HCut" no tienen equivalente directo en la EQ de la Wing: se dejan planas.');
+        warnOnce(mix, 'Bandas de EQ de corte (LCut/HCut o filtros de cruce BU/BE/LR) no tienen equivalente en la EQ de la Wing: se dejan planas; revisa esos buses/matrices.');
       }
       type = 'PEQ'; gain = 0;
     }
@@ -139,7 +139,7 @@ function convertGate(mix, g) {
 function sendMode(mix, tap) {
   if (tap === 'POST') return 'POST';
   if (tap === 'GRP') return 'GRP';
-  if (tap !== 'PRE') warnOnce(mix, 'Envíos con punto de toma IN/PRE-EQ/POST-EQ convertidos a PRE: ajusta el punto de toma del bus en la Wing.');
+  if (tap !== 'PRE') warnOnce(mix, 'Envíos pre-fader con toma IN, <-EQ o EQ-> convertidos a PRE: comprueba el punto de toma (tap) de esos canales en la Wing.');
   return 'PRE';
 }
 
@@ -165,6 +165,9 @@ function convertStrip(mix, s, kind, slots) {
     }
     if (Object.keys(send).length) o.send = send;
   }
+  if (kind === 'main' && s.sends.length) {
+    o.send = Object.fromEntries(s.sends.map((snd) => [`MX${snd.number}`, { on: !!snd.on, lvl: fader(snd.level), pre: snd.tap !== 'POST' }]));
+  }
   if (s.dcas && s.dcas.length) o.tags = s.dcas.map((d) => `#D${d}`).join(',');
   if (s.muteGroups && s.muteGroups.length) warnOnce(mix, 'Los grupos de mute no se convierten automáticamente: reasígnalos en la Wing.');
   if (s.colorInverted) warnOnce(mix, 'Los colores invertidos de la X32/M32 no existen en la Wing: se usa el color normal.');
@@ -189,7 +192,10 @@ export function write(mix, opts = {}) {
         warnOnce(mix, `Hay canales con entradas locales por encima de la ${localCount} que la ${options.wingModel} no tiene: reasígnalos (o elige "Entradas locales X32 → AES50 A").`);
       }
       o.in = deepMerge(o.in, { conn: { grp, in: n } });
-      const src = { name: o.name, col: o.col };
+      // Si dos canales comparten entrada (p. ej. voz y su copia para monitores),
+      // la fuente conserva el nombre del primero.
+      const prev = ae.io.in[grp] && ae.io.in[grp][n];
+      const src = prev ? {} : { name: o.name, col: o.col };
       if (s.input.hasGain && grp !== 'CRD') {
         const [min, max] = grp === 'LCL' ? [-2.5, 45] : [-3, 45.5];
         src.g = r(clampWarn(mix, s.input.gain, min, max, 'Ganancia de previo'));

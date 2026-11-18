@@ -8,6 +8,8 @@ import { emptyMix, NEG_INF, warnOnce } from '../model.js';
 
 const COLOR_CODES = { OFF: 'off', RD: 'red', GN: 'green', YE: 'yellow', BL: 'blue', MG: 'magenta', CY: 'cyan', WH: 'white' };
 const EQ_TYPES = { LCUT: 'LCUT', LSHV: 'LSHV', PEQ: 'PEQ', VEQ: 'VEQ', HSHV: 'HSHV', HCUT: 'HCUT' };
+// Tipos de envío: IN, <-EQ (pre-EQ), EQ-> (post-EQ), PRE, POST, GRP.
+const SEND_TAPS = { IN: 'IN', '<-EQ': 'PREEQ', 'EQ->': 'POSTEQ', PRE: 'PRE', POST: 'POST', GRP: 'GRP' };
 
 // Divide una línea respetando las cadenas entre comillas.
 export function tokenize(line) {
@@ -22,6 +24,9 @@ function num(s, fallback = 0) {
   if (s === undefined) return fallback;
   const t = String(s).trim();
   if (/^-?(inf|oo)$/i.test(t)) return NEG_INF;
+  // Frecuencias con "k" como separador decimal: 3k55 = 3550 Hz, 1k00 = 1000 Hz.
+  const k = t.match(/^(\d+)k(\d*)$/i);
+  if (k) return parseFloat(`${k[1]}.${k[2] || 0}`) * 1000;
   const v = parseFloat(t.replace(/k$/i, 'e3'));
   return Number.isFinite(v) ? v : fallback;
 }
@@ -52,8 +57,13 @@ function strip(index) {
   };
 }
 
-function eqBand(t) {
-  return { type: EQ_TYPES[String(t[0]).toUpperCase()] || 'PEQ', freq: num(t[1], 1000), gain: num(t[2]), q: num(t[3], 2) };
+// Las bandas 1 y 6 de buses/matrices admiten filtros de cruce (BU6, BU12,
+// BE6, BE12, LR12, LR24...): se tratan como corte bajo/alto.
+function eqBand(t, band) {
+  const code = String(t[0]).toUpperCase();
+  let type = EQ_TYPES[code];
+  if (!type) type = /^(BU|BE|LR)\d+$/.test(code) ? (band === 1 ? 'LCUT' : 'HCUT') : 'PEQ';
+  return { type, freq: num(t[1], 1000), gain: num(t[2]), q: num(t[3], 2) };
 }
 
 // Bloques de /config/routing/IN -> grupo de entrada y primer previo (headamp).
@@ -117,7 +127,7 @@ export function parse(text) {
     let rest;
     if (path[0] === 'main') { s = path[1] === 'st' ? mains[0] : path[1] === 'm' ? mains[1] : null; rest = path.slice(2); }
     else if (targets[path[0]]) { s = targets[path[0]][+path[1] - 1]; rest = path.slice(2); }
-    else { ignored.add('/' + path[0]); continue; }
+    else { if (!['config', '-stat', '-prefs'].includes(path[0])) ignored.add('/' + path[0]); continue; }
     if (!s) continue;
     const kind = path[0];
     const key = rest.join('/');
@@ -127,6 +137,8 @@ export function parse(text) {
       Object.assign(s, parseColor(t[2]));
       if ((kind === 'ch' || kind === 'auxin') && t[3] !== undefined) channelSource[`${kind}${s.index}`] = +t[3];
     } else if (key === 'preamp') {
+      // Matrices y mains solo tienen inversión de fase: "/mtx/01/preamp OFF".
+      if (t.length === 1) { s.invert = on(t[0]); continue; }
       s.trim = num(t[0]); s.invert = on(t[1]);
       if (kind === 'ch') s.hpf = { on: on(t[2]), slope: num(t[3], 12), freq: num(t[4], 80) };
     } else if (key === 'gate') {
@@ -135,14 +147,15 @@ export function parse(text) {
       s.comp = {
         on: on(t[0]), mode: String(t[1] || 'COMP').toUpperCase(), det: String(t[2] || 'RMS').toUpperCase(), env: String(t[3] || 'LOG').toUpperCase(),
         thr: num(t[4], 0), ratio: num(t[5], 3), knee: num(t[6], 2), gain: num(t[7]), att: num(t[8], 10), hld: num(t[9], 10), rel: num(t[10], 150),
-        mix: num(t[13], 100), auto: on(t[14]),
+        // Matrices y mains no tienen keysrc: un campo menos al final.
+        mix: num(t.length >= 15 ? t[13] : t[12], 100), auto: on(t.length >= 15 ? t[14] : t[13]),
       };
     } else if (key === 'eq') {
       s.eq = s.eq || { on: false, bands: [] };
       s.eq.on = on(t[0]);
     } else if (/^eq\/\d$/.test(key)) {
       s.eq = s.eq || { on: false, bands: [] };
-      s.eq.bands[+rest[1] - 1] = eqBand(t);
+      s.eq.bands[+rest[1] - 1] = eqBand(t, +rest[1]);
     } else if (key === 'mix') {
       s.on = on(t[0]); s.fader = num(t[1], NEG_INF);
       if (kind === 'mtx' || kind === 'main') { if (kind === 'main') s.pan = num(t[2]); }
@@ -151,7 +164,8 @@ export function parse(text) {
       const n = +rest[1];
       const target = kind === 'ch' || kind === 'auxin' ? 'bus' : 'mtx';
       // Envíos impares: on nivel pan tipo; pares: on nivel (el pan/tipo lo marca el impar).
-      s.sends.push({ target, number: n, on: on(t[0]), level: num(t[1], NEG_INF), pan: t[2] !== undefined ? num(t[2]) : 0, tap: t[3] ? String(t[3]).toUpperCase() : null });
+      const tap = t[3] ? SEND_TAPS[String(t[3]).toUpperCase()] || 'POST' : null;
+      s.sends.push({ target, number: n, on: on(t[0]), level: num(t[1], NEG_INF), pan: t[2] !== undefined ? num(t[2]) : 0, tap });
     } else if (key === 'grp') {
       s.dcas = bits(t[0]); s.muteGroups = bits(t[1]);
     } else if (key === 'insert') {
@@ -160,7 +174,7 @@ export function parse(text) {
   }
 
   // Los envíos pares heredan el tipo del impar anterior.
-  for (const s of [...ch, ...aux, ...bus]) {
+  for (const s of [...ch, ...aux, ...bus, ...mains]) {
     s.sends.sort((a, b) => a.number - b.number);
     s.sends.forEach((snd, i) => { if (!snd.tap) snd.tap = (s.sends[i - 1] && s.sends[i - 1].tap) || 'POST'; });
   }

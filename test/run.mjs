@@ -66,5 +66,16 @@ t('entradas locales → AES50 A', () => {
   const out = JSON.parse(convert(scn, { options: { localTarget: 'A' } }).output);
   assert.equal(out.ae_data.ch['17'].in.conn.grp, 'A');
 });
+t('frecuencias 3k55 y tipo EQ->', () => {
+  const c = ae.ch['2'];
+  assert.equal(c.eq['2f'], 3550); assert.equal(c.eq.hf, 8430);
+  assert.equal(c.send['1'].mode, 'PRE'); assert.equal(c.send['2'].lvl, -13); assert.equal(c.send['2'].mode, 'PRE');
+  assert.equal(c.send['3'].mode, 'PRE');
+});
+t('matriz: preamp solo fase, dinámica sin keysrc', () => {
+  const m = ae.mtx['2'];
+  assert.equal(m.in.set.inv, true); assert.equal(m.dyn.mix, 80); assert.equal(m.dyn.auto, true);
+});
+t('main → matrices', () => assert.deepEqual(ae.main['1'].send.MX2, { on: true, lvl: -3, pre: false }));
 console.log(`\n${warnings.length} avisos:\n - ` + warnings.join('\n - '));
 process.exit(failures ? 1 : 0);
