@@ -1,0 +1,12 @@
+{
+  "name": "mixconvert",
+  "version": "0.1.0",
+  "description": "Conversor de escenas entre mesas de mezclas (X32/M32 → Behringer WING)",
+  "type": "module",
+  "bin": { "mixconvert": "cli.mjs" },
+  "scripts": {
+    "test": "node test/run.mjs",
+    "start": "npx --yes serve -l 8080 ."
+  },
+  "license": "MIT"
+}

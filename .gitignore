@@ -1,0 +1,3 @@
+node_modules/
+*.snap
+!test/fixtures/*.snap

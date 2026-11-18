@@ -1,0 +1,41 @@
+#4.0# "Concierto" "Prueba de conversión" %000000000 1 X32
+/config/chlink OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF OFF
+/config/routing/IN A1-8 A9-16 AN17-24 CARD1-8 AUX/CR
+/ch/01/config "Bombo" 1 RD 1
+/ch/01/delay OFF   0.3
+/ch/01/preamp +2.5 OFF ON 24  80.0
+/ch/01/gate ON EXP3 -42.0 30.0 2 50.0 180 0
+/ch/01/gate/filter OFF 3.0 990.9
+/ch/01/dyn ON COMP RMS LOG -18.0 4.0 2 3.00 10 10.0 151 POST 0 100 OFF
+/ch/01/dyn/filter OFF 3.0 990.9
+/ch/01/insert OFF POST OFF
+/ch/01/eq ON
+/ch/01/eq/1 LShv 60.0 +4.00 1.0
+/ch/01/eq/2 PEQ 380.0 -6.00 3.0
+/ch/01/eq/3 VEQ 2.5k +2.00 2.0
+/ch/01/eq/4 HCut 12.0k +0.00 1.0
+/ch/01/mix ON  -3.5 ON +0 OFF   -oo
+/ch/01/mix/01 ON  -10.0 +0 PRE
+/ch/01/mix/02 ON  -inf
+/ch/01/mix/03 OFF  +0.0 -20 POST
+/ch/01/grp %00000101 %000000
+/ch/17/config "Voz" 1 GNi 17
+/ch/17/preamp +0.0 ON ON 12 120.0
+/ch/17/mix OFF -inf ON -30 ON +0.0
+/ch/25/config "PB L" 1 BL 25
+/headamp/032 +45.5 ON
+/headamp/016 +30.0 ON
+/bus/01/config "Mon 1" 1 CY
+/bus/01/mix ON +0.0 OFF +0 OFF -oo
+/bus/01/eq ON
+/bus/01/eq/1 PEQ 120.0 -3.00 2.0
+/bus/01/eq/6 HShv 8.0k -2.00 1.0
+/bus/01/mix/01 ON -6.0 +0 POST
+/mtx/01/config "Delay" 1 YE
+/mtx/01/mix ON -5.0
+/main/st/config "LR" 1 WH
+/main/st/mix ON  -2.0 +0
+/main/m/mix OFF -inf
+/dca/1 ON  -1.5
+/dca/1/config "Batería" 1 RD
+/fxrtn/01/config "Rev" 1 MG
