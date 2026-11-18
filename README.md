@@ -67,3 +67,8 @@ y registrarlo en `src/convert.js`; no hace falta un conversor por cada pareja.
 - *WING Remote Protocols* v3.0.5, Patrick-Gilles Maillot (estructura JSON de los snapshots).
 - Mapa de propiedades de [libwing](https://crates.io/crates/libwing) (rangos y enumeraciones).
 - Formato `.scn` de X32/M32 según la documentación OSC de P.-G. Maillot.
+
+## Licencia
+
+[MIT](LICENSE). Behringer, Midas y WING son marcas de sus respectivos propietarios;
+este proyecto no está afiliado a ellos.
